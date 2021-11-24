@@ -9,7 +9,7 @@ kpc = 3.086e19
 km = 1000
 bins = 25
 
-diri ='/home/nialow/Documents/'
+diri ='data_files/'
 filis = ['Sextans.xlsx', 'Sculptor.xlsx', 'Fornax.xlsx', 'Carina.xlsx']
 #filis =['Sculptor.xlsx', 'Fornax.xlsx', 'Carina.xlsx']
 maxis = [245,130,80,250]
