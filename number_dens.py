@@ -9,15 +9,21 @@ kpc = 3.086e19
 km = 1000
 bins = 15
 mi = np.pi/180/60
-mi = mi*101
+
+#============Ontly Variable that Needs Changing================
+#============Set between 0 and 3, inclusive====================
+
+#========================User input ======================================================|
+#-------------------------------------------------Select Index--------------------------------------------------------------------------------------------------------|
+#   0               1               2               3
+#   Sextans     Sculptor    Fornax       Carina
+gal_numb = 3
+#=====================User input Complete==================================================|
 
 
 cols = ['r','g','b','k']
 diri ='data_files/'
 filis = ['Sextans.xlsx', 'Sculptor.xlsx', 'Fornax.xlsx', 'Carina.xlsx']
-#filis =['Sculptor.xlsx', 'Fornax.xlsx', 'Carina.xlsx']
-maxis = [245,150,90,245]
-minis = [205,95,20,205]
 
 gs_dist = np.array([ 86, 79, 138, 101])
 
@@ -29,15 +35,21 @@ num_file = diri + 'nom_dens.xlsx'
 
 df = pd.read_excel(num_file,skiprows=1)
 
-ri = df.iloc[:,6]
-ro = df.iloc[:,7]
+ri = df.iloc[:,6-2*gal_numb]
+ro = df.iloc[:,7-2*gal_numb]
+
+mi = mi*gs_dist[gal_numb]
 
 ro = np.array(ro)
 ri = np.array(ri)
 ro=ro/mi/mi
-ri=ri*mi
+ri=ri*mi/rl[gal_numb]
+
 plt.plot(ri,ro,'.')
-plt.xlabel('R (kpc)')
+plt.xlabel('R/$R_e$')
 plt.ylabel('Projected Number Density ($kpc^{-2}$)')
+plt.title(filis[gal_numb][0:-5])
+
+plt.xscale('log')
 
 plt.show()

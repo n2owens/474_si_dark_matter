@@ -3,6 +3,19 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 
+#========================User input ======================================================|
+#-------------------------------------------------Select Number of Bins------------------------------------------------------------------------------------------|
+bins = 15
+#---------------------------------Select Desired Variabe---------------------------------------------------------------------------------------------------------| 
+#   1   =   Mass
+#   2   =   Velocity
+#   3   =   Density
+des_var = 1  
+#---------------------------------Include Pisces and Pegasus (True or False)--------------------------------------------------------------------------|
+include_pis = False
+#---------------------------------Log Y Scale-------------------------------------------------------------------------------------------------------------------------|
+log_y = False
+#=====================User input Complete==================================================|
 
 #=======================Calculate Distances if Needed=========================================
 def eri_proto(df_j,distj,vcol):
@@ -48,7 +61,6 @@ G=6.67e-11
 msol = 2e30
 kpc = 3.086e19
 km = 1000
-bins = 15
 
 #========================Data File Locations=============================================
 diri ='data_files/'
@@ -169,49 +181,64 @@ for bb in range(0,10):
     
     #==================Plot mass, velocity, or density============================================
     if bb != 0: #Doesn't include Sextans, change to arbitrarily high number to get Sextans
+        
         #=============Mass
-        #plt.errorbar(rt[0:int(bins)],mt[0:int(bins)], yerr =yt[0:int(bins)],label = filis[bb][0:-5],linestyle = ' ',color='k',marker='.')
+        if des_var ==1:
+            plt.errorbar(rt[0:int(bins)],mt[0:int(bins)], yerr =yt[0:int(bins)],label = filis[bb][0:-5],linestyle = ' ',color='k',marker='.')
         
         #=============Velocity
-        #plt.errorbar(rt[0:int(bins)],vel2[0:int(bins)], yerr =dvel[0:int(bins)]/vel_all,marker='.',label = filis[bb][0:-5],linestyle = ' ',color='k')
+        elif des_var ==2:
+            plt.errorbar(rt[0:int(bins)],vel2[0:int(bins)], yerr =dvel[0:int(bins)]/vel_all,marker='.',label = filis[bb][0:-5],linestyle = ' ',color='k')
         
         #============Density
-        plt.errorbar(rt[3:int(bins)]/rl[bb],dt[3:int(bins)], yerr =ddt[3:int(bins)],label = filis[bb][0:-5],linestyle = ' ',marker='.',color='k')
+        elif des_var ==3:
+            plt.errorbar(rt[3:int(bins)]/rl[bb],dt[3:int(bins)], yerr =ddt[3:int(bins)],label = filis[bb][0:-5],linestyle = ' ',marker='.',color='k')
     
     #======================Label Axes===============================================
-    #plt.xlabel('Distance (kpc)')
-    plt.xlabel('r/$r_e$')
-    #plt.ylabel('Mass ($M_{sol}$)')
-    #plt.ylabel('$V_c$ (km/s)')
-    plt.ylabel(r'$\Sigma/<\Sigma_{1/2}>$')
+    if des_var<3:
+        plt.xlabel('Distance (kpc)')
+    else:
+        plt.xlabel('r/$r_e$')
+    
+    if des_var ==1:
+        plt.ylabel('Mass ($M_{sol}$)')
+    elif des_var ==2:
+        plt.ylabel('$V_c$ (km/s)')
+    elif des_var ==3:
+        plt.ylabel(r'$\Sigma/<\Sigma_{1/2}>$')
     plt.legend()
     
     print(filis[bb][0:-5])
-    print(str(vel_all)+ " +- "+ str(dvel_all) +" km/s")
-    print(str(mass_o/1e6) + "x 10^6 solar M")
+    print("Vc_{c1/2}: "+str(vel_all)+ " +- "+ str(dvel_all) +" km/s")
+    print("M_{1/2}: "+str(mass_o/1e6) + "x 10^6 solar M")
     
     #===================Half Light Mass and Velocity =========================================
-    #plt.plot(rl[bb],mass_o,'.',label="r_e,M_e",color='k',marker='p')
-    #plt.plot(rl[bb],vel_all,'.',label="r_e,V_c",color='k',marker='p')
+    if des_var == 1:
+        plt.plot(rl[bb],mass_o,'.',label="r_e,M_e",color='k',marker='p')
+    elif des_var == 2:
+        plt.plot(rl[bb],vel_all,'.',label="r_e,V_c",color='k',marker='p')
     
     #==========================Set log scales=============================================
     plt.xscale('log')
-    #plt.yscale('log')
+    if log_y:
+        plt.yscale('log')
     plt.legend()
     plt.show()
 
 #========================Make plots of Re vs Vc ====================================================
-names_final =  ['Sextans', 'Sculptor', 'Fornax', 'Carina','Leo_I','Draco','Leo_II','Eridanas_II','AntliaII','CraterII','PiscesII','PegasusIII']
-v_circ = np.array([12.3,14.5,20.9,12.7,16.3,18.0,13.3,19,11.1,9.1,9,9])
-dv_circ = np.array([0.2,0.1,0.1,0.1,0.3,0.5,0.4,1,0.5,0.3,5,5])
+#==========================Include PiscesII and PegasusIII=====================================
+if include_pis:
+    names_final =  ['Sextans', 'Sculptor', 'Fornax', 'Carina','Leo_I','Draco','Leo_II','Eridanas_II','AntliaII','CraterII','PiscesII','PegasusIII']
+    v_circ = np.array([12.3,14.5,20.9,12.7,16.3,18.0,13.3,19,11.1,9.1,9,9])
+    dv_circ = np.array([0.2,0.1,0.1,0.1,0.3,0.5,0.4,1,0.5,0.3,5,5])
+    rad_ef = np.array([768,282,714,254,251,221,176,280,2800,1066,58,53])
 
-rad_ef = np.array([768,282,714,254,251,221,176,280,2800,1066,58,53])
-
-#names_final =  ['Sextans', 'Sculptor', 'Fornax', 'Carina','Leo_I','Draco','Leo_II','Eridanas_II','AntliaII','CraterII']
-#v_circ = np.array([12.3,14.5,20.9,12.7,16.3,18.0,13.3,19,11.1,9.1])
-#dv_circ = np.array([0.2,0.1,0.1,0.1,0.3,0.5,0.4,1,0.5,0.3])
-
-#rad_ef = np.array([768,282,714,254,251,221,176,280,2800,1066])
+#=========================Don't Include PiscesII and PegasusIII===============================
+else:
+    names_final =  ['Sextans', 'Sculptor', 'Fornax', 'Carina','Leo_I','Draco','Leo_II','Eridanas_II','AntliaII','CraterII']
+    v_circ = np.array([12.3,14.5,20.9,12.7,16.3,18.0,13.3,19,11.1,9.1])
+    dv_circ = np.array([0.2,0.1,0.1,0.1,0.3,0.5,0.4,1,0.5,0.3])
+    rad_ef = np.array([768,282,714,254,251,221,176,280,2800,1066])
 
 
 drad_ef = np.array([44,45,77,39,27,19,42,10,100])
