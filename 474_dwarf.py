@@ -3,42 +3,115 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 
+
+#=======================Calculate Distances if Needed=========================================
+def eri_proto(df_j,distj,vcol):
+    
+    vel_star = df_j.iloc[:,vcol]
+    dec_star = df_j.iloc[:,3]
+    ra_star = df_j.iloc[:,2]
+    for iij in range(0,len(vel_star)):
+        if '+' in str(vel_star[iij]):
+            vel_star[iij] = str(vel_star[iij]).split("+")[0]
+    raj = np.array(ra_star,dtype=float)/180*np.pi
+    raj = raj - np.mean(raj)
+    decj = np.array(dec_star,dtype=float)/180*np.pi
+    decj = decj - np.mean(decj)
+    rj = np.sqrt(decj**2 + raj**2)*distj
+    
+    vel_j = np.array(vel_star,dtype=float)
+    return rj, vel_j
+
+#=================Function for Getting Data from Excel==========================================    
+def get_draco(filisi):
+    df_i = pd.read_excel(filisi)
+    if 'erida' in filisi:
+        radi, veli = eri_proto(df_i,366,7)
+    elif 'Draco' in filisi:
+        disti = 80
+        radi = np.array(df_i.iloc[:,17],dtype = float)
+        veli = -np.array(df_i.iloc[:,9],dtype = float)
+        radi = radi/180*np.pi*disti
+    elif 'Antli' in filisi:
+        radi,veli = eri_proto(df_i,130,4)
+    elif 'Crater' in filisi:
+        radi, veli = eri_proto(df_i,118,7)
+    else:
+        disti = 210
+        radi = np.array(df_i.iloc[:,7],dtype = float)
+        veli = np.array(df_i.iloc[:,8],dtype = float)
+        radi = radi/180/60*np.pi*disti
+    return radi, veli
+
+#========================Some Constants==================================================
 G=6.67e-11
 msol = 2e30
 kpc = 3.086e19
 km = 1000
-bins = 25
+bins = 15
 
+#========================Data File Locations=============================================
 diri ='data_files/'
-filis = ['Sextans.xlsx', 'Sculptor.xlsx', 'Fornax.xlsx', 'Carina.xlsx']
-#filis =['Sculptor.xlsx', 'Fornax.xlsx', 'Carina.xlsx']
-maxis = [245,130,80,250]
-minis = [205,90,30,200]
+filis = ['Sextans.xlsx', 'Sculptor.xlsx', 'Fornax.xlsx', 'Carina.xlsx','Draco.xlsx', 'LeoII.xlsx','AntliaII.xlsx','eridanas.xlsx','CraterII.xlsx','LeoI.xlsx']
 
+#=================Initial Velocity Locations from Visual Inspection==================================
+maxis = [245,150,90,245,1000,105,310,100,110,325]
+minis = [205,95,20,205,0,55,270,40,80,240]
+
+#================Distance to Galaxy and 2D Half Light Radius (in KPC)=========================
+gs_dist = np.array([ 86, 79, 138, 101,80,210,130,366,118,250])
+rl = np.array([0.768,0.282,0.714,0.254,0.221,0.176,2.8,0.28,1.07,0.251])
+
+#==========Lower Res Galaxy Distances, Used in Some of the Data files=============================
+#===========These are corrected to the more accurate values later on and are no longer used===============
 dist_gal = [90,90,140,110]
 
-#maxis = [155,100,260]
-#minis = [60,0,190]
-
-for bb in range(0,4):
-    df = pd.read_excel(diri +filis[bb])
+#================Iterate Over all Galaxies=================================================
+for bb in range(0,10):
+    #=========================Get Data==========================================
+    if bb > 3 and bb < 9:
+        dist, vel = get_draco(diri+filis[bb])
+    elif bb < 4:
+        df = pd.read_excel(diri +filis[bb])
     
-    dist = np.array(df.iloc[:,-1],dtype=float)
-    vel = np.array(df.iloc[:,-2],dtype=float)
+        dist = np.array(df.iloc[:,-1],dtype=float)
+        dist = dist/dist_gal[bb]*gs_dist[bb]
+    
+        vel = np.array(df.iloc[:,-2],dtype=float)
+    else:
+        df = pd.read_excel('data_files/mateo_table.xls')
+        dist = np.array(df.iloc[:,1],dtype = float)
+        vel = np.array(df.iloc[:,3],dtype = float)
+        dist = dist[np.isnan(vel) == False]
+        vel = vel[np.isnan(vel) == False]
+        dist = dist*250*np.pi/(180*3600)
+        
+    vel=vel[dist<1.5]
+    dist=dist[dist<1.5]
     dist = dist[np.isnan(vel) == False]
     vel = vel[np.isnan(vel) == False]
-     
+    
     dist = dist[vel > minis[bb]]
     vel = vel[vel > minis[bb]]
     
     dist = dist[vel < maxis[bb]]
-    d_dist = 10*dist/dist_gal[bb]
+    d_dist = 10*dist/gs_dist[bb]
     
     vel = vel[vel < maxis[bb]]
-    S_sq = ((vel-vel.mean())**2).sum()/len(vel)
     
-    m = (((vel-vel.mean())*km)**2)*dist*kpc/(G*msol)
-    #m=abs(vel)
+    S_sq = 0
+    
+    #===========Eliminate bad values for velocity====================================
+    for ii in range(0,5):
+        main_sig = sum(((vel - vel.mean())*km)**2)/len(vel)
+        dmain_sig = main_sig/np.sqrt(2*(len(vel)-1))
+        vel_all = np.sqrt(3)*np.sqrt(main_sig)/km
+        dvel_all = np.sqrt(3)*dmain_sig/(2*np.sqrt(main_sig))/km
+        dist = dist[abs(vel-vel.mean())<2*vel_all]
+        vel = vel[abs(vel-vel.mean())<2*vel_all]
+    
+    
+    #==============Initialize arrays======================================
     mt =[]
     sigo = []
     dsi = []
@@ -46,14 +119,20 @@ for bb in range(0,4):
     rt = []
     dr = max(dist)/bins
     dt = []
+    ddt = []
+    
+    #=====================Get Velocity Dispersion and Error===============================
     for ii in range(0,bins):
         count = 0
         sum_of = 0
         rt.insert(ii,dr*(ii+0.5))
-        for jj in range(0,len(dist)):
-            if ii*dr < dist[jj] and dist[jj] < (ii+1)*dr:
-                count+=1
+        vel_m = vel[ii*dr < dist]
+        dist_m = dist[ii*dr < dist]
+        vel_m = vel_m[dist_m < (ii+1)*dr]
+        count = len(vel_m)
+        S_sq = sum((vel_m-vel_m.mean())**2)
         if count >0:
+            S_sq = S_sq/count
             sigo.insert(ii,np.sqrt(count*S_sq/(count-1)))
             dsi.insert(ii,sigo[ii]/np.sqrt(2*(count-1)))
         else:
@@ -62,51 +141,88 @@ for bb in range(0,4):
     sigo = np.array(sigo)
     rt = np.array(rt)
     dsi = np.array(dsi)
-    '''for ii in range(0,25):
-        count = 0
-        sum_of = 0
-        for jj in range(0,len(dist)):
-            if ii*dr < dist[jj] and dist[jj] < (ii+1)*dr:
-                count+=1
-                sum_of += m[jj]
-        if count >0:
-            mt.insert(ii,sum_of/count)
-        else:
-            mt.insert(ii,0)
-    for ii in range(0,25):
-        count = 0
-        sum_of = 0
-        for jj in range(0,len(dist)):
-            if ii*dr < dist[jj] and dist[jj] < (ii+1)*dr:
-                count+=1
-                sum_of += (m[jj]-mt[ii])**2
-        if count >0:
-            yt.insert(ii,np.sqrt(sum_of)/count)
-        else:
-            yt.insert(ii,0)'''
-    mt = (sigo*sigo)*rt*km*km*kpc/(G*msol)
-    yt = 2*sigo*dsi*rt*km*km*kpc/(G*msol)
-    for ii in range(1,bins):
-        dt.insert(ii-1,3*(mt[ii]-mt[ii-1])/(4*np.pi*(pow(rt[ii],3)-pow(rt[ii-1],3))))
-    dt.insert(0,dt[0])
-    plt.errorbar(rt,sigo,yerr=dsi,label = filis[bb][0:-5],linestyle=' ')
-    plt.xlabel('Distance (kpc)')
-    plt.ylabel('$\sigma$ (km/s)')
-    plt.legend()
-    plt.show()
-    '''plt.plot(dist,vel,'.',label = filis[bb][0:-5])
-    plt.xlabel('Distance (kpc)')
-    plt.ylabel('$v_{gs}$ (km/s)')
-    plt.legend()
-    plt.show()'''
-    plt.errorbar(rt,mt, yerr =yt,label = filis[bb][0:-5],linestyle = ' ')
-    plt.xlabel('Distance (kpc)')
-    plt.ylabel('Mass ($M_{sol}$)')
-    plt.legend()
-    plt.show()
-    '''plt.plot(rt,dt,'.',label = filis[bb][0:-5])
-    plt.xlabel('Distance (kpc)')
-    plt.ylabel('Density ($M_{sol}$/$kpc^3$)')
-    plt.legend()
-    plt.show()'''
+    vel2 = np.sqrt(3)*sigo
+    dvel = np.sqrt(3)*dsi
+
+    #=============================Get Masses========================================
+    mt = 4*(sigo*sigo)*rt*km*km*kpc/(G*msol)
+    yt = 8*sigo*dsi*rt*km*km*kpc/(G*msol)
     
+    #===================================Get Density=================================
+    for ii in range(1,bins):
+        dt.insert(ii-1,(mt[ii]-mt[ii-1])/(np.pi*(pow(rt[ii],2)-pow(rt[ii-1],2))))
+        ddt.insert(ii-1,np.sqrt(yt[ii]**2+yt[ii-1]**2)/(np.pi*(pow(rt[ii],2)-pow(rt[ii-1],2))))
+    dt.insert(0,dt[0])
+    ddt.insert(0,ddt[0])
+    dt = np.array(dt)
+    ddt = np.array(ddt)
+    
+    #================Get mass from total velocity dispersion===================
+    mass_o = 4*rl[bb]*main_sig*kpc/G/msol
+    
+    
+    #=========Get Unitless Density=========================================================
+    d_half = mass_o/(np.pi*rl[bb]**2)
+    
+    dt = dt/d_half
+    ddt = ddt/d_half
+    
+    #==================Plot mass, velocity, or density============================================
+    if bb != 0: #Doesn't include Sextans, change to arbitrarily high number to get Sextans
+        #=============Mass
+        #plt.errorbar(rt[0:int(bins)],mt[0:int(bins)], yerr =yt[0:int(bins)],label = filis[bb][0:-5],linestyle = ' ',color='k',marker='.')
+        
+        #=============Velocity
+        #plt.errorbar(rt[0:int(bins)],vel2[0:int(bins)], yerr =dvel[0:int(bins)]/vel_all,marker='.',label = filis[bb][0:-5],linestyle = ' ',color='k')
+        
+        #============Density
+        plt.errorbar(rt[3:int(bins)]/rl[bb],dt[3:int(bins)], yerr =ddt[3:int(bins)],label = filis[bb][0:-5],linestyle = ' ',marker='.',color='k')
+    
+    #======================Label Axes===============================================
+    #plt.xlabel('Distance (kpc)')
+    plt.xlabel('r/$r_e$')
+    #plt.ylabel('Mass ($M_{sol}$)')
+    #plt.ylabel('$V_c$ (km/s)')
+    plt.ylabel(r'$\Sigma/<\Sigma_{1/2}>$')
+    plt.legend()
+    
+    print(filis[bb][0:-5])
+    print(str(vel_all)+ " +- "+ str(dvel_all) +" km/s")
+    print(str(mass_o/1e6) + "x 10^6 solar M")
+    
+    #===================Half Light Mass and Velocity =========================================
+    #plt.plot(rl[bb],mass_o,'.',label="r_e,M_e",color='k',marker='p')
+    #plt.plot(rl[bb],vel_all,'.',label="r_e,V_c",color='k',marker='p')
+    
+    #==========================Set log scales=============================================
+    plt.xscale('log')
+    #plt.yscale('log')
+    plt.legend()
+    plt.show()
+
+#========================Make plots of Re vs Vc ====================================================
+names_final =  ['Sextans', 'Sculptor', 'Fornax', 'Carina','Leo_I','Draco','Leo_II','Eridanas_II','AntliaII','CraterII','PiscesII','PegasusIII']
+v_circ = np.array([12.3,14.5,20.9,12.7,16.3,18.0,13.3,19,11.1,9.1,9,9])
+dv_circ = np.array([0.2,0.1,0.1,0.1,0.3,0.5,0.4,1,0.5,0.3,5,5])
+
+rad_ef = np.array([768,282,714,254,251,221,176,280,2800,1066,58,53])
+
+#names_final =  ['Sextans', 'Sculptor', 'Fornax', 'Carina','Leo_I','Draco','Leo_II','Eridanas_II','AntliaII','CraterII']
+#v_circ = np.array([12.3,14.5,20.9,12.7,16.3,18.0,13.3,19,11.1,9.1])
+#dv_circ = np.array([0.2,0.1,0.1,0.1,0.3,0.5,0.4,1,0.5,0.3])
+
+#rad_ef = np.array([768,282,714,254,251,221,176,280,2800,1066])
+
+
+drad_ef = np.array([44,45,77,39,27,19,42,10,100])
+markers = ['d','_','1','.','8','p','<','>','^','v','*','s']
+
+for ii in range(0,len(names_final)):
+    plt.errorbar(rad_ef[ii]/1000,v_circ[ii],yerr=dv_circ[ii],linestyle='',marker=markers[ii],label=names_final[ii],color='k')
+    
+plt.xlabel('$R_e$ (kpc)')
+plt.ylabel('$V_{ce}$ (km/s)')
+plt.legend()
+plt.yscale('log')
+plt.xscale('log')
+plt.show()
