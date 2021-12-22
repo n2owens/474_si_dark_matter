@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 
+
 #========================User input ======================================================|
 #-------------------------------------------------Select Number of Bins------------------------------------------------------------------------------------------|
 bins = 15
@@ -10,7 +11,7 @@ bins = 15
 #   1   =   Mass
 #   2   =   Velocity
 #   3   =   Density
-des_var = 1  
+des_var = 1
 #---------------------------------Include Pisces and Pegasus (True or False)--------------------------------------------------------------------------|
 include_pis = False
 #---------------------------------Log Y Scale-------------------------------------------------------------------------------------------------------------------------|
@@ -119,8 +120,8 @@ for bb in range(0,10):
         dmain_sig = main_sig/np.sqrt(2*(len(vel)-1))
         vel_all = np.sqrt(3)*np.sqrt(main_sig)/km
         dvel_all = np.sqrt(3)*dmain_sig/(2*np.sqrt(main_sig))/km
-        dist = dist[abs(vel-vel.mean())<2*vel_all]
-        vel = vel[abs(vel-vel.mean())<2*vel_all]
+        dist = dist[abs(vel-vel.mean())<np.sqrt(2)*vel_all]
+        vel = vel[abs(vel-vel.mean())<np.sqrt(2)*vel_all]
     
     
     #==============Initialize arrays======================================
@@ -185,6 +186,10 @@ for bb in range(0,10):
         #=============Mass
         if des_var ==1:
             plt.errorbar(rt[0:int(bins)],mt[0:int(bins)], yerr =yt[0:int(bins)],label = filis[bb][0:-5],linestyle = ' ',color='k',marker='.')
+            mass_check = mass_o*(rt/rl[bb])**2
+            plt.plot(rt,mass_check,'r--')
+            plt.plot([0.35,0.35],[10**6,10**8],'b--')
+            plt.plot([1,1],[10**6,10**8],'b--')
         
         #=============Velocity
         elif des_var ==2:
@@ -224,15 +229,14 @@ for bb in range(0,10):
         plt.yscale('log')
     plt.legend()
     plt.show()
-
+#plt.show()
 #========================Make plots of Re vs Vc ====================================================
 #==========================Include PiscesII and PegasusIII=====================================
 if include_pis:
-    names_final =  ['Sextans', 'Sculptor', 'Fornax', 'Carina','Leo_I','Draco','Leo_II','Eridanas_II','AntliaII','CraterII','PiscesII','PegasusIII']
-    v_circ = np.array([12.3,14.5,20.9,12.7,16.3,18.0,13.3,19,11.1,9.1,9,9])
-    dv_circ = np.array([0.2,0.1,0.1,0.1,0.3,0.5,0.4,1,0.5,0.3,5,5])
-    rad_ef = np.array([768,282,714,254,251,221,176,280,2800,1066,58,53])
-
+    names_final =  ['Sextans', 'Sculptor', 'Fornax', 'Carina','Leo_I','Draco','Leo_II','Eridanas_II','AntliaII','CraterII','PiscesII','PegasusIII','TriangulumII','SegueI']
+    v_circ = np.array([12.3,14.5,20.9,12.7,16.3,18.0,13.3,19,11.1,9.1,9,9,9,7])
+    dv_circ = np.array([0.2,0.1,0.1,0.1,0.3,0.5,0.4,1,0.5,0.3,5,5,4,2])
+    rad_ef = np.array([768,282,714,254,251,221,176,280,2800,1066,58,53,34,30])
 #=========================Don't Include PiscesII and PegasusIII===============================
 else:
     names_final =  ['Sextans', 'Sculptor', 'Fornax', 'Carina','Leo_I','Draco','Leo_II','Eridanas_II','AntliaII','CraterII']
@@ -242,11 +246,26 @@ else:
 
 
 drad_ef = np.array([44,45,77,39,27,19,42,10,100])
-markers = ['d','_','1','.','8','p','<','>','^','v','*','s']
+markers = ['d','_','1','.','8','p','<','>','^','v','*','s','$a$','$b$']
+
+lin_x = np.array([0.07,0.3])
+lin_y = 200*lin_x**(3/2)
+lin_x2 = np.array([0.03,0.3])
+lin_y2 = 400*lin_x2**(1.45)
+
+lin_x3 = np.array([0.07,0.3])
+lin_y3 = 100*lin_x3**(3/2)
+lin_x4 = np.array([0.03,0.3])
+lin_y4 = 250*lin_x4**(1.45)
 
 for ii in range(0,len(names_final)):
     plt.errorbar(rad_ef[ii]/1000,v_circ[ii],yerr=dv_circ[ii],linestyle='',marker=markers[ii],label=names_final[ii],color='k')
-    
+
+plt.plot(lin_x,lin_y,'k--')
+plt.plot(lin_x2,lin_y2,'b--')
+plt.plot(lin_x3,lin_y3,'k--')
+plt.plot(lin_x4,lin_y4,'b--')
+
 plt.xlabel('$R_e$ (kpc)')
 plt.ylabel('$V_{ce}$ (km/s)')
 plt.legend()
